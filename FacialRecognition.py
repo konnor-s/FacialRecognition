@@ -15,7 +15,7 @@ known_encoding3 = face_recognition.face_encodings(known_image3)[0]
 
 known_encodings = [known_encoding1, known_encoding2, known_encoding3]
 
-cred = credentials.Certificate("iotproject-60e4c-firebase-adminsdk-cg6ru-842fcbd53a.json")
+cred = credentials.Certificate("credentials.json")
 initialize_app(cred, {'storageBucket': 'iotproject-60e4c.appspot.com'})
 
 firestore_db = firestore.client()
@@ -44,6 +44,6 @@ while (1):
         else:
             print("Intruder Alert!")
             #do something
-            firestore_db.collection('CurrentIncident').document("CurrentIncidentDoc").update({'newData': False})
+        firestore_db.collection('CurrentIncident').document("CurrentIncidentDoc").update({'newData': False})
     sleep(5)
 
