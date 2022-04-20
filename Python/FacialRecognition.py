@@ -24,26 +24,36 @@ bucket = storage.bucket()
 #continuously run this program
 while (1):
     
-    doc = list(firestore_db.collection(u'CurrentIncident').get()) #get this collection
-    doc = doc[0].to_dict() #get the document data
-    
-    if (doc["newData"] == True): # there is a new image
-        datetime = doc["datetime"]
-        image = bucket.get_blob("Images/" + datetime) # retrieve image
-        image.download_to_filename("./Images/" + datetime) # download image
+    uncheckedImages = list(bucket.list_blobs(prefix="Unchecked/"))
+    if (len(uncheckedImages)>1):
+        image = uncheckedImages[1]
+        imageName = str(image).split(", Unchecked/")[1]
+        
+        image.download_to_filename("./" + imageName) # download image
 
-        unknown_image = face_recognition.load_image_file("./Images/" + datetime)
+        unknown_image = face_recognition.load_image_file("./" + imageName)
         unknown_encoding = face_recognition.face_encodings(unknown_image)[0]
         results = face_recognition.compare_faces(known_encodings, unknown_encoding)
         
-        if (True in results): # if the person is identified
+        face_locations = face_recognition.face_locations(unknown_image)
+
+        
+        #delete image from storage
+        image.delete()
+
+        if (face_locations == []): #no face
+            pass
+
+
+        elif (True in results): # if the person is identified
             print("Person Recognized")
             
             
            
-        else:
+        else: #face found but not recognized
             print("Intruder Alert!")
-            #do something
-        firestore_db.collection('CurrentIncident').document("CurrentIncidentDoc").update({'newData': False})
+            #move image to unidentified folder in storage
+
+    
     sleep(5)
 
