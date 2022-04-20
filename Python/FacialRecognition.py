@@ -4,6 +4,7 @@ import face_recognition
 import firebase_admin
 from firebase_admin import credentials, firestore, storage, initialize_app
 import numpy as np
+import os
 
 
 known_image1 = face_recognition.load_image_file("KnownImages/biden.jpg")
@@ -29,9 +30,9 @@ while (1):
         image = uncheckedImages[1]
         imageName = str(image).split(", Unchecked/")[1]
         
-        image.download_to_filename("./" + imageName) # download image
+        image.download_to_filename("./Unchecked" + imageName) # download image
 
-        unknown_image = face_recognition.load_image_file("./" + imageName)
+        unknown_image = face_recognition.load_image_file("./Unchecked" + imageName)
         unknown_encoding = face_recognition.face_encodings(unknown_image)[0]
         results = face_recognition.compare_faces(known_encodings, unknown_encoding)
         
@@ -52,8 +53,12 @@ while (1):
            
         else: #face found but not recognized
             print("Intruder Alert!")
-            #move image to unidentified folder in storage
+            imageToUpload = bucket.blob("Intruders/" + imageName)
+            imageToUpload.upload_from_filename("Unchecked/" + imageName)
+            
 
+    #delete local image
+    os.remove("Unchecked/" + imageName)
     
     sleep(5)
 
