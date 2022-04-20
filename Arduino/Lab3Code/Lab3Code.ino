@@ -1,9 +1,12 @@
 #include <ArduinoBLE.h>
 #include <Arduino_HTS221.h>
-#include "TimeoutTimer.h"
+//#include "TimeoutTimer.h"
 #define BUFSIZE 20
 String interval="1";
 long myTime = millis();
+const int sensor = 4;
+int state; // 0 close - 1 open switch
+String OPEN="OPEN";
 
 /*   We'll use the ArduinoBLE library to simulate a basic UART connection
      following this UART service specification by Nordic Semiconductors.
@@ -22,6 +25,10 @@ BLEShortCharacteristic tempChar("2A6E", BLERead | BLENotify );
 void setup()
 {
   Serial.begin(9600);
+  
+  pinMode(sensor, INPUT_PULLUP); /// Ardunio pullup resistor
+
+  
   while (!Serial);
   
   if ( !BLE.begin() )
@@ -71,14 +78,28 @@ void loop()
     // While the central device is connected...
     while ( central.connected() )
     {
+
+
+       state = digitalRead(sensor);
+  
+       if (state == HIGH){
+        
+        Serial.println("OPENSwitch");
+        delay(2000);
+        rxChar.writeValue( OPEN );
+        
+        }
+        
+      
+      
       // Get input from user, send to central
-      char inputs[BUFSIZE + 1];
-      if ( getUserInput( inputs, BUFSIZE ) )
-      {
-        Serial.print("[Send] ");
-        Serial.println( inputs );
-        rxChar.writeValue( inputs );
-      }
+      //char inputs[BUFSIZE + 1];
+      //if ( getUserInput( inputs, BUFSIZE ) )
+     // {
+        //Serial.print("[Send] ");
+       // Serial.println( inputs );
+        //rxChar.writeValue( inputs );
+      //}
 
       // Receive data from central (if written is true)
       // if ( txChar.written() )
@@ -102,16 +123,16 @@ void loop()
 
 
       // TODO: Should get this Interval from Firebase via Pi via UART
-      if ( txChar.written() )
-      {
-        Serial.print("[Recv interval] ");
-        Serial.println( txChar.value() );
-         interval = txChar.value();
-      }
+      ///if ( txChar.written() )
+      //{
+        //Serial.print("[Recv interval] ");
+        //Serial.println( txChar.value() );
+         //interval = txChar.value();
+      //}
       
       
      
-      
+      /*
       if ((millis()-myTime)/1000 > interval.toInt()) {
         myTime=millis();
         float temp = HTS.readTemperature();
@@ -127,7 +148,7 @@ void loop()
         tempChar.writeValue( shortTemp );
 
       }
-
+    */
 
 
     }
@@ -144,7 +165,7 @@ void loop()
             From: https://github.com/adafruit/Adafruit_BluefruitLE_nRF51
 */
 /**************************************************************************/
-bool getUserInput(char buffer[], uint8_t maxSize)
+/*bool getUserInput(char buffer[], uint8_t maxSize)
 {
   // timeout in 100 milliseconds
   TimeoutTimer timeout(100);
@@ -166,3 +187,4 @@ bool getUserInput(char buffer[], uint8_t maxSize)
 
   return true;
 }
+*/
