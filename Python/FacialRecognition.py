@@ -9,6 +9,8 @@ import smtplib
 import imghdr
 from email.message import EmailMessage
 import json
+import datetime
+import matplotlib.pyplot as plt
 
 emailFile = open('email.json')
 emailData = json.load(emailFile)
@@ -32,62 +34,80 @@ initialize_app(cred, {'storageBucket': 'iotproject-60e4c.appspot.com'})
 firestore_db = firestore.client()
 bucket = storage.bucket()
 
+dt = datetime.datetime.now()
+i = dt.minute
 # continuously run this program
 while (1):
     print(".")
+    dt = datetime.datetime.now()
+
+   
+            
+
     uncheckedImages = list(bucket.list_blobs(prefix="Unchecked/"))
     if (len(uncheckedImages) > 1):
         print('Checking Image...')
+        
+        dt_str = str(dt)
         image = uncheckedImages[1]
         imageName = str(image).split(", Unchecked/")[1]
         imageName = imageName.split(",")[0]
         print(imageName)
         image.download_to_filename("./Unchecked/" + imageName)  # download image
         unknown_image = face_recognition.load_image_file("Unchecked/" + imageName)
-        unknown_encoding = face_recognition.face_encodings(unknown_image)[0]
-        results = face_recognition.compare_faces(known_encodings, unknown_encoding)
-
         face_locations = face_recognition.face_locations(unknown_image)
+        # no face
+        if (face_locations == []):  
+            print("No face found")
+            firestore_db.collection('Exit').document(dt_str).set({
+                    'Time':dt_str})
+            #set the tenent as gone
+            firestore_db.collection('Present').document('Present').set({
+                    'Present':False})
+        else:
+            unknown_encoding = face_recognition.face_encodings(unknown_image)[0]
+            results = face_recognition.compare_faces(known_encodings, unknown_encoding)
+
+                # if the person is identified
+            if (True in results):  
+                print("Person Recognized")
+                firestore_db.collection('Identified').document(dt_str).set({
+                    'Time':dt_str})
+                #set the tenent as present
+                firestore_db.collection('Present').document('Present').set({
+                    'Present':True})
+                
+
+            # face found but not recognized
+            else:  
+                print("Intruder Alert!")
+                #upload to storage
+                imageToUpload = bucket.blob("Intruders/" + imageName)
+                imageToUpload.upload_from_filename("Unchecked/" + imageName)
+
+                firestore_db.collection('Unidentified').document(dt_str).set({
+                    'Time':dt_str})
+
+                newMessage = EmailMessage()
+                newMessage['Subject'] = "Intruder Detected: " + imageName.split(".")[0]
+                newMessage['From'] = SENDER_EMAIL
+                newMessage['To'] = RECIEVER_EMAIL
+                newMessage.set_content('Image attached')
+
+                with open('Unchecked/' + imageName, 'rb') as f:
+                    image_data = f.read()
+                    image_type = imghdr.what(f.name)
+                    image_name = f.name
+
+                newMessage.add_attachment(image_data, maintype='image',
+                                        subtype=image_type, filename=image_name)
+
+                with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+                    smtp.login(SENDER_EMAIL, PASSWORD)
+                    smtp.send_message(newMessage)
 
         # delete image from storage
         image.delete()
-
-        # no face
-        if (face_locations == []):  
-            pass
-
-        # if the person is identified
-        elif (True in results):  
-            print("Person Recognized")
-
-        # face found but not recognized
-        else:  
-            print("Intruder Alert!")
-            #upload to storage
-            imageToUpload = bucket.blob("Intruders/" + imageName)
-            imageToUpload.upload_from_filename("Unchecked/" + imageName)
-
-
-            
-            newMessage = EmailMessage()
-            newMessage['Subject'] = "Intruder Detected: " + imageName.split(".")[0]
-            newMessage['From'] = SENDER_EMAIL
-            newMessage['To'] = RECIEVER_EMAIL
-            newMessage.set_content('Image attached')
-
-            with open('Unchecked/' + imageName, 'rb') as f:
-                image_data = f.read()
-                image_type = imghdr.what(f.name)
-                image_name = f.name
-
-            newMessage.add_attachment(image_data, maintype='image',
-                                    subtype=image_type, filename=image_name)
-
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-
-                smtp.login(SENDER_EMAIL, PASSWORD)
-                smtp.send_message(newMessage)
-
         # delete local image
         os.remove("Unchecked/" + imageName)
 
