@@ -8,7 +8,7 @@ var nodeimu = require('@trbll/nodeimu');
 const { getDatabase, ref, onValue, set, update, get, child } = require('firebase/database');
 const { createBluetooth } = require( 'node-ble' );
 
-const ARDUINO_BLUETOOTH_ADDR = '95:34:6d:ae:85:35';
+const ARDUINO_BLUETOOTH_ADDR = '1b:91:ae:f6:85:53';
 
 const UART_SERVICE_UUID      = '6E400001-B5A3-F393-E0A9-E50E24DCCA9E';
 const TX_CHARACTERISTIC_UUID = '6E400002-B5A3-F393-E0A9-E50E24DCCA9E';
@@ -67,7 +67,7 @@ async function main( )
     // Callback for when data is received on RX characteristic
     rxChar.on( 'valuechanged', buffer =>
     {
-        if (buffer.toString() == "OPEN"){
+        if (buffer.toString() == "open"){
             myCamera.snap().then((result) => {
                 console.log("picture taken");
                 imageToUpload = bucket.upload("/home/pi/Desktop/a.jpg", options);
@@ -82,6 +82,7 @@ async function main( )
     });
         
 }
+
 
 main().then((ret) =>
 {
